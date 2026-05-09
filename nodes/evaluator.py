@@ -1,10 +1,10 @@
 # nodes/evaluator.py
 #
-# Evaluates the user's answer and assigns a score (0, 1, or 2) plus feedback.
-# The prompt and scoring philosophy change depending on state.mode:
-#   "reading"  → strict correctness, rewards clear understanding of the text
-#   "science"  → rewards reasoning quality, curiosity, and causal thinking
-#                even if the answer is not perfectly correct
+# Evaluates the user's answer and produces feedback.
+# Behaviour changes by state.mode:
+#   "reading" → strict scoring (0-2), rewards text comprehension
+#   "science" → lenient scoring (0-2), rewards reasoning and curiosity
+#   "wisdom"  → NO score, purely conversational reflective response
 #
 # Called directly from app.py to avoid coach_node re-running on answer submit.
 #
@@ -40,6 +40,29 @@ Additional rules:
 Respond in EXACTLY this format with no extra text:
 Score: <0 or 1 or 2>
 Feedback: <one sentence of helpful feedback>
+"""
+
+WISDOM_EVAL_PROMPT = """You are a wise and warm conversation partner responding to someone's reflection on a proverb.
+
+Proverb:
+\"\"\"{proverb}\"\"\"
+
+Reflective question asked:
+\"\"\"{question}\"\"\"
+
+What the person shared:
+\"\"\"{answer}\"\"\"
+
+Your role:
+- Respond as a thoughtful friend who has thought deeply about this wisdom
+- Acknowledge what they said genuinely — do not dismiss or correct
+- Add one layer of depth, a question, or a related idea that extends their thinking
+- Keep your response to 2–3 sentences maximum
+- Be warm, calm, and curious in tone
+- Never score, grade, or judge — this is a reflection, not a test
+- If the person said very little or "I don't know", gently invite them to explore further
+
+Respond with only your reflection — no labels, no "Score:", no "Feedback:".
 """
 
 SCIENCE_EVAL_PROMPT = """You are an encouraging science mentor evaluating how well a student is thinking, not just what they know.
@@ -82,6 +105,21 @@ def evaluator_node(state):
     """
 
     print(f"evaluator_node — mode: {state.mode} — model: {MODEL_NAME}")
+
+    # --- Wisdom mode: no scoring, purely conversational reflection ---
+    if state.mode == "wisdom":
+        prompt = WISDOM_EVAL_PROMPT.format(
+            proverb=state.paragraph,       # paragraph holds the proverb text in wisdom mode
+            question=state.question,
+            answer=state.answer,
+        )
+        response = ollama.chat(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        state.feedback = response["message"]["content"].strip()
+        state.score = -1   # sentinel: UI will suppress score display for wisdom mode
+        return state
 
     # Select prompt based on mode
     if state.mode == "science":

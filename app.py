@@ -1,22 +1,22 @@
 # app.py
 #
-# ThinkDeep — Streamlit UI supporting Story Mode and Science Mode.
+# ThinkDeep — Streamlit UI supporting Story Mode, Science Mode, and Wisdom Mode.
 #
-# Top-level flow:
-#   1. User picks a mode (Story / Science) via tab selector
-#   2. Story Mode  → book catalog   → story progression
-#      Science Mode → topic catalog → topic progression
-#   3. The progression section is IDENTICAL for both modes:
-#      display chunk → coach_node question → user answer → evaluator_node feedback → next chunk
-#   4. Nodes are mode-aware: state.mode drives the prompt style inside each node.
+# Top-level routing:
+#   "wisdom_entry" in session_state  → Wisdom interaction view
+#   "chunks" in session_state        → Story/Science chunk progression (unchanged)
+#   neither                          → Catalog tabs (Story / Science / Wisdom)
 #
-# Key architecture decision:
-#   coach_node and evaluator_node are called DIRECTLY here (not through graph.invoke)
-#   so the coach does not re-run and overwrite the question when the user submits an answer.
+# Wisdom Mode is intentionally different from Story/Science:
+#   - No chunking or linear progression
+#   - User picks a theme, sees one proverb, reflects freely
+#   - evaluator_node returns a conversational reflection (no score)
+#   - User can explore another theme at any time
 #
-# Future LangSmith tracing point: wrap node calls with named run contexts per mode + topic.
+# Future LangSmith tracing point: wrap node calls with named run contexts per mode.
 
 import os
+import random
 import streamlit as st
 
 from state import SessionState
@@ -24,6 +24,7 @@ from nodes.coach import coach_node
 from nodes.evaluator import evaluator_node
 from stories import STORIES, load_story_text, make_chunks
 from science_topics import TOPICS, load_topic_text
+from wisdom.wisdom_entries import get_themes, get_entries_by_theme
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -50,11 +51,18 @@ st.caption("Every question is a chance to think deeper.")
 
 
 # ---------------------------------------------------------------------------
-# Helper: wipe all chunk/progression state when leaving a session
+# Helpers: clear session state
 # ---------------------------------------------------------------------------
 def clear_session():
+    """Clears story/science chunk progression state."""
     for key in ["chunks", "current_index", "content_title", "content_key",
                 "app_mode", "phase", "question", "feedback", "score"]:
+        st.session_state.pop(key, None)
+
+
+def clear_wisdom_session():
+    """Clears wisdom interaction state."""
+    for key in ["wisdom_entry", "wisdom_phase", "wisdom_feedback"]:
         st.session_state.pop(key, None)
 
 
@@ -102,12 +110,92 @@ def render_catalog(catalog: dict, load_fn, mode_value: str):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 1 — Catalog view (no active session)
+# SECTION 1 — Wisdom Mode interaction view
+# Routed here when a wisdom entry has been selected.
+# Completely separate from the chunk-based story/science flow.
 # ---------------------------------------------------------------------------
-if "chunks" not in st.session_state:
+if "wisdom_entry" in st.session_state:
 
-    # Mode selector tabs — clean and minimal
-    tab_story, tab_science = st.tabs(["📚 Story Mode", "🔭 Science Mode"])
+    entry = st.session_state["wisdom_entry"]
+    phase = st.session_state.get("wisdom_phase", "reading")
+
+    # Top bar
+    col_title, col_back = st.columns([4, 1])
+    with col_title:
+        st.subheader(f"🌿 {entry['theme']}")
+        st.caption(entry["culture"])
+    with col_back:
+        if st.button("← Wisdom"):
+            clear_wisdom_session()
+            st.rerun()
+
+    st.divider()
+
+    # Display the proverb prominently
+    st.markdown(
+        f"<p style='font-size:22px; font-style:italic; "
+        f"line-height:1.6; color:#2c2c2c;'>\"{entry['proverb']}\"</p>",
+        unsafe_allow_html=True,
+    )
+    st.write("")
+
+    # Reflective question
+    st.markdown(f"**{entry['question']}**")
+    st.write("")
+
+    if phase == "reading":
+        answer = st.text_area(
+            "Your reflection:",
+            placeholder="There's no right answer here — just share what comes to mind.",
+            key="wisdom_answer",
+        )
+
+        if st.button("Share Reflection"):
+            if not answer.strip():
+                st.warning("Write something — even a few words.")
+            else:
+                with st.spinner("Reflecting…"):
+                    # Use evaluator_node in wisdom mode — returns conversational feedback, no score
+                    state = SessionState(
+                        session_id="ui-session",
+                        mode="wisdom",
+                        paragraph=entry["proverb"],   # proverb as the "passage"
+                        question=entry["question"],
+                        answer=answer.strip(),
+                    )
+                    state = evaluator_node(state)
+
+                st.session_state["wisdom_feedback"] = state.feedback
+                st.session_state["wisdom_phase"] = "reflected"
+                st.rerun()
+
+    elif phase == "reflected":
+        # Show the AI's conversational reflection
+        st.markdown("---")
+        st.markdown("*A thought in return:*")
+        st.write(st.session_state["wisdom_feedback"])
+        st.write("")
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("Explore Another"):
+                clear_wisdom_session()
+                st.rerun()
+        with col_b:
+            if st.button("Back to Catalog"):
+                clear_wisdom_session()
+                st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# SECTION 2 — Catalog view (no active session)
+# ---------------------------------------------------------------------------
+elif "chunks" not in st.session_state:
+
+    # Three-mode tab selector
+    tab_story, tab_science, tab_wisdom = st.tabs(
+        ["📚 Story Mode", "🔭 Science Mode", "🌿 Wisdom Mode"]
+    )
 
     with tab_story:
         st.subheader("Choose a Story")
@@ -119,9 +207,32 @@ if "chunks" not in st.session_state:
         st.write("")
         render_catalog(TOPICS, load_topic_text, mode_value="science")
 
+    with tab_wisdom:
+        st.subheader("Explore Human Wisdom")
+        st.caption("Choose a theme. Discover a proverb. Reflect freely.")
+        st.write("")
+
+        themes = get_themes()  # sorted list of all themes
+
+        # Theme buttons rendered as a flowing grid (3 per row)
+        cols_per_row = 3
+        rows = [themes[i : i + cols_per_row] for i in range(0, len(themes), cols_per_row)]
+
+        for row in rows:
+            cols = st.columns(cols_per_row)
+            for col, theme in zip(cols, row):
+                with col:
+                    if st.button(theme, key=f"theme_{theme}", use_container_width=True):
+                        # Pick a random entry from this theme
+                        entries = get_entries_by_theme(theme)
+                        chosen = random.choice(entries)
+                        st.session_state["wisdom_entry"] = chosen
+                        st.session_state["wisdom_phase"] = "reading"
+                        st.rerun()
+
 
 # ---------------------------------------------------------------------------
-# SECTION 2 — Progression view (active session)
+# SECTION 3 — Story / Science chunk progression (active session)
 # This section is identical regardless of mode — the nodes handle the difference.
 # ---------------------------------------------------------------------------
 else:
