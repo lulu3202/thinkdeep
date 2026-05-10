@@ -1,0 +1,274 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Lora:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+
+:root {
+  /* Earthy journal palette */
+  --terra:        #c4623a;
+  --terra-light:  #e09070;
+  --sage:         #5f7a6b;
+  --sage-light:   #c8ddd8;
+  --parchment:    #f5ede0;
+  --parchment-dk: #ece0cc;
+  --ink:          #1e2d2f;
+  --ink-muted:    #4a5a5c;
+  --paper:        #fdf8f0;
+  --lav:          #ddd0ec;
+
+  /* Compatibility aliases — components use these names */
+  --peach:        var(--terra-light);
+  --peach-dark:   var(--terra);
+  --mint:         var(--sage);
+  --mint-light:   var(--sage-light);
+  --cream:        var(--parchment-dk);
+  --lavender:     var(--lav);
+  --dark:         var(--ink);
+  --white:        #ffffff;
+  --offwhite:     var(--parchment);
+
+  --border:       1.5px solid rgba(30,45,47,0.15);
+  --shadow:       0 4px 28px rgba(30,45,47,0.10), 0 1px 6px rgba(30,45,47,0.05);
+  --shadow-sm:    0 2px 12px rgba(30,45,47,0.07);
+  --radius:       14px;
+  --radius-pill:  10px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--parchment);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+#root { position: relative; min-height: 100vh; }
+
+h1 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: clamp(2.8rem, 6vw, 5rem);
+  font-weight: 600;
+  line-height: 1.1;
+}
+h2 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 600;
+}
+h3 { font-family: 'Lora', serif; font-weight: 600; }
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.card {
+  background: var(--paper);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 32px;
+}
+.card-mint {
+  background: var(--sage-light);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 32px;
+}
+
+/* ── Pills ────────────────────────────────────────────────────────── */
+.pill-label {
+  display: inline-block;
+  border: 1.5px solid rgba(30,45,47,0.18);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pill-peach { background: rgba(224,144,112,0.25); color: var(--terra); }
+.pill-mint  { background: rgba(95,122,107,0.15);  color: var(--sage); }
+.pill-cream { background: var(--parchment-dk);     color: var(--ink-muted); }
+.pill-lav   { background: var(--lav);              color: var(--ink); }
+
+/* ── Buttons ──────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 10px 24px;
+  border: 1.5px solid rgba(30,45,47,0.2);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s;
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+}
+.btn:hover  { transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn:active { transform: translateY(1px); box-shadow: none; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+.btn-peach {
+  background: var(--terra);
+  color: #fff;
+  border-color: var(--terra);
+}
+.btn-peach:hover { background: #b35530; border-color: #b35530; }
+
+.btn-mint {
+  background: var(--sage);
+  color: #fff;
+  border-color: var(--sage);
+}
+.btn-mint:hover { background: #4d6659; border-color: #4d6659; }
+
+.btn-white { background: var(--paper); }
+.btn-dark  { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* ── Inputs ───────────────────────────────────────────────────────── */
+.wisdom-input {
+  width: 100%;
+  font-family: 'Lora', serif;
+  font-size: 16px;
+  padding: 16px 20px;
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  background: var(--paper);
+  color: var(--ink);
+  resize: none;
+  outline: none;
+  min-height: 120px;
+  line-height: 1.75;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.wisdom-input:focus {
+  border-color: var(--terra);
+  box-shadow: 0 0 0 3px rgba(196,98,58,0.12);
+}
+.wisdom-input::placeholder { color: #b5a490; font-style: italic; }
+
+/* ── Typography ───────────────────────────────────────────────────── */
+.proverb-text {
+  font-family: 'Lora', Georgia, serif;
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.9;
+  color: var(--ink);
+  text-align: center;
+}
+
+/* ── AI response card — journal left-rule style ───────────────────── */
+.ai-card {
+  background: var(--parchment-dk);
+  border-left: 3px solid var(--terra);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 20px 24px;
+  font-family: 'Lora', serif;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--ink);
+}
+
+/* Socratic mode — sage left-rule */
+.ai-card-socratic {
+  background: rgba(200,221,216,0.4);
+  border-left: 3px solid var(--sage);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 20px 24px;
+  font-family: 'Lora', serif;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--ink);
+}
+
+/* ── Theme pills ──────────────────────────────────────────────────── */
+.theme-pill {
+  background: var(--paper);
+  border: var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  padding: 12px 20px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s;
+  color: var(--ink);
+  text-align: center;
+}
+.theme-pill:hover  {
+  background: var(--terra);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+.theme-pill:active { transform: translateY(0); }
+
+/* ── Navigation ───────────────────────────────────────────────────── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 40px;
+  background: rgba(245,237,224,0.93);
+  backdrop-filter: blur(14px);
+  border-bottom: 1.5px solid rgba(30,45,47,0.10);
+}
+.nav-logo {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+.nav-logo span { color: var(--terra); }
+
+/* ── Floating decorations ─────────────────────────────────────────── */
+.deco {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  animation: float 7s ease-in-out infinite;
+  opacity: 0.55;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-12px) rotate(4deg); }
+}
+
+/* ── Mode toggle (Socratic / Reflect) ────────────────────────────── */
+.mode-toggle {
+  display: inline-flex;
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.mode-toggle button {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 18px;
+  border: none;
+  background: var(--paper);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.mode-toggle button.active {
+  background: var(--terra);
+  color: #fff;
+}
+.mode-toggle button.active-sage {
+  background: var(--sage);
+  color: #fff;
+}

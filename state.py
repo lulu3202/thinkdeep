@@ -49,3 +49,12 @@ class SessionState(BaseModel):
     # Example: [{"question": "...", "answer": "...", "score": 2}]
     # Future LangSmith tracing point: each entry maps to one graph run.
     history: list = Field(default_factory=list)
+
+    # --- Explore Deeper fields ---
+
+    # Conversation turns during an Explore Deeper session.
+    # Each turn: {"user": "...", "ai": "..."}
+    explore_history: list = Field(default_factory=list)
+
+    # Number of explore turns taken (soft limit: 3 max)
+    explore_turn_count: int = 0

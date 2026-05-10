@@ -15,6 +15,18 @@ import ollama
 from config import MODEL_NAME
 
 
+def _trim_passage(text: str, max_words: int = 300) -> str:
+    """
+    Truncates a passage to max_words before sending to the model.
+    Reduces prompt size → faster generation with no meaningful quality loss,
+    since the model only needs enough context to grade the answer.
+    """
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    return " ".join(words[:max_words]) + "…"
+
+
 STORY_EVAL_PROMPT = """You are a strict but fair tutor grading a student's answer about a story.
 
 Passage:
@@ -107,9 +119,10 @@ def evaluator_node(state):
     print(f"evaluator_node — mode: {state.mode} — model: {MODEL_NAME}")
 
     # --- Wisdom mode: no scoring, purely conversational reflection ---
+    # (streaming handled separately by stream_wisdom_evaluator)
     if state.mode == "wisdom":
         prompt = WISDOM_EVAL_PROMPT.format(
-            proverb=state.paragraph,       # paragraph holds the proverb text in wisdom mode
+            proverb=state.paragraph,
             question=state.question,
             answer=state.answer,
         )
@@ -118,19 +131,22 @@ def evaluator_node(state):
             messages=[{"role": "user", "content": prompt}]
         )
         state.feedback = response["message"]["content"].strip()
-        state.score = -1   # sentinel: UI will suppress score display for wisdom mode
+        state.score = -1   # sentinel: UI suppresses score display for wisdom mode
         return state
+
+    # Trim passage to 300 words — enough context to grade, much faster to process
+    trimmed = _trim_passage(state.paragraph)
 
     # Select prompt based on mode
     if state.mode == "science":
         prompt = SCIENCE_EVAL_PROMPT.format(
-            paragraph=state.paragraph,
+            paragraph=trimmed,
             question=state.question,
             answer=state.answer,
         )
     else:
         prompt = STORY_EVAL_PROMPT.format(
-            paragraph=state.paragraph,
+            paragraph=trimmed,
             question=state.question,
             answer=state.answer,
         )
@@ -162,3 +178,26 @@ def evaluator_node(state):
         state.feedback = "Good attempt — try to explain your thinking a little more."
 
     return state
+
+
+def stream_wisdom_evaluator(state):
+    """
+    Streaming generator for wisdom mode evaluator — use with st.write_stream().
+    Wisdom responses are conversational (2-4 sentences) so streaming makes the
+    wait feel much shorter. The caller captures the full string from st.write_stream()
+    and stores it in session_state["wisdom_feedback"].
+
+    # Future LangSmith tracing point: wrap with a named run context.
+    """
+    print(f"stream_wisdom_evaluator — model: {MODEL_NAME}")
+    prompt = WISDOM_EVAL_PROMPT.format(
+        proverb=state.paragraph,
+        question=state.question,
+        answer=state.answer,
+    )
+    for chunk in ollama.chat(
+        model=MODEL_NAME,
+        messages=[{"role": "user", "content": prompt}],
+        stream=True,
+    ):
+        yield chunk["message"]["content"]
